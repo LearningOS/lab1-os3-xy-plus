@@ -19,6 +19,8 @@ use crate::loader::{get_num_app, init_app_cx};
 use crate::sync::UPSafeCell;
 use lazy_static::*;
 pub use switch::__switch;
+use crate::syscall::TaskInfo;
+use crate::timer::get_time_us;
 pub use task::{TaskControlBlock, TaskStatus};
 
 pub use context::TaskContext;
@@ -54,6 +56,11 @@ lazy_static! {
         let mut tasks = [TaskControlBlock {
             task_cx: TaskContext::zero_init(),
             task_status: TaskStatus::UnInit,
+            task_info: TaskInfo {
+                status: TaskStatus::Running,
+                syscall_times: [0; MAX_SYSCALL_NUM],
+                time: get_time_us(),
+            }
         }; MAX_APP_NUM];
         for (i, t) in tasks.iter_mut().enumerate().take(num_app) {
             t.task_cx = TaskContext::goto_restore(init_app_cx(i));
@@ -135,8 +142,36 @@ impl TaskManager {
             panic!("All applications completed!");
         }
     }
-
+// pub struct TaskInfo {
+//     status: TaskStatus,
+//     syscall_times: [u32; MAX_SYSCALL_NUM],
+//     time: usize,
+// }
     // LAB1: Try to implement your function to update or get task info!
+    fn get_current_task_info(&self, ti: *mut TaskInfo) -> isize {
+        let mut inner = self.inner.exclusive_access();
+        let current = inner.current_task;
+        unsafe {
+            (*ti).status = inner.tasks[current].task_info.status;
+            (*ti).time = (get_time_us() - inner.tasks[current].task_info.time) / 1000;
+            (*ti).syscall_times = inner.tasks[current].task_info.syscall_times;
+        }
+        0
+    }
+
+    fn update_current_task_syscall_times(&self, syscall_id: usize) {
+        let mut inner = self.inner.exclusive_access();
+        let current = inner.current_task;
+        inner.tasks[current].task_info.syscall_times[syscall_id] += 1;
+    }
+}
+
+pub fn get_current_task_info(ti: *mut TaskInfo) -> isize {
+    TASK_MANAGER.get_current_task_info(ti)
+}
+
+pub fn update_current_task_syscall_times(syscall_id: usize) {
+    TASK_MANAGER.update_current_task_syscall_times(syscall_id);
 }
 
 /// Run the first task in task list.
