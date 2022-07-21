@@ -17,10 +17,10 @@ mod task;
 use crate::config::{MAX_APP_NUM, MAX_SYSCALL_NUM};
 use crate::loader::{get_num_app, init_app_cx};
 use crate::sync::UPSafeCell;
-use lazy_static::*;
-pub use switch::__switch;
 use crate::syscall::TaskInfo;
 use crate::timer::get_time_us;
+use lazy_static::*;
+pub use switch::__switch;
 pub use task::{TaskControlBlock, TaskStatus};
 
 pub use context::TaskContext;
@@ -142,11 +142,11 @@ impl TaskManager {
             panic!("All applications completed!");
         }
     }
-// pub struct TaskInfo {
-//     status: TaskStatus,
-//     syscall_times: [u32; MAX_SYSCALL_NUM],
-//     time: usize,
-// }
+    // pub struct TaskInfo {
+    //     status: TaskStatus,
+    //     syscall_times: [u32; MAX_SYSCALL_NUM],
+    //     time: usize,
+    // }
     // LAB1: Try to implement your function to update or get task info!
     fn get_current_task_info(&self, ti: *mut TaskInfo) -> isize {
         let mut inner = self.inner.exclusive_access();
